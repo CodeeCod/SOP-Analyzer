@@ -1,4 +1,5 @@
 SOP Analyzer - это инструмент командной строки для анализа и просмотра содержимого файлов пакетов SimpleOne (.sop). Утилита предоставляет подробную информацию о метаданных пакета, статистике записей, таблицах и выполняемых операциях.
+
 ![SOP Analyzer](image.png)
 ## Возможности
 
@@ -27,7 +28,7 @@ cd sop-analyzer
 ### Базовое использование
 
 ```bash
-python sop_analyzer.py package.sop
+python3 sop_analyzer.py package.sop
 ```
 
 ### Опции командной строки
@@ -45,32 +46,32 @@ python sop_analyzer.py package.sop
 
 **Полный отчет:**
 ```bash
-python sop_analyzer.py package.sop
+python3 sop_analyzer.py package.sop
 ```
 
 **Только метаданные:**
 ```bash
-python sop_analyzer.py package.sop --metadata
+python3 sop_analyzer.py package.sop --metadata
 ```
 
 **Статистика записей:**
 ```bash
-python sop_analyzer.py package.sop --stats
+python3 sop_analyzer.py package.sop --stats
 ```
 
 **Информация о таблицах:**
 ```bash
-python sop_analyzer.py package.sop --tables
+python3 sop_analyzer.py package.sop --tables
 ```
 
 **Вывод в JSON формате:**
 ```bash
-python sop_analyzer.py package.sop --json
+python3 sop_analyzer.py package.sop --json
 ```
 
 **Диагностическая информация:**
 ```bash
-python sop_analyzer.py package.sop --debug
+python3 sop_analyzer.py package.sop --debug
 ```
 
 ## Структура вывода
@@ -129,7 +130,7 @@ python sop_analyzer.py package.sop --debug
 Если утилита не может прочитать файл, используйте опцию `--debug` для получения диагностической информации:
 
 ```bash
-python sop_analyzer.py problematic.sop --debug
+python3 sop_analyzer.py problematic.sop --debug
 ```
 
 Это покажет:
