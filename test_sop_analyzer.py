@@ -1,68 +1,73 @@
+# test_sop_analyzer.py
 import pytest
 import json
 import zipfile
 import zlib
 import tempfile
 import os
+import subprocess
+import sys
 from pathlib import Path
 from sop_analyzer import SOPAnalyzer, RecordStats, TableInfo, OutputFormatter
 
 
+@pytest.fixture
+def sample_data():
+    """Создание тестовых данных"""
+    return {
+        "name": "test_package",
+        "pack_application_id": "test_app_123",
+        "timestamp": "2024-01-15T10:30:00Z",
+        "version": "1.0",
+        "records": [
+            {
+                "table_name": "users",
+                "action": "insert",
+                "is_strong_overwrite": False
+            },
+            {
+                "table_name": "users",
+                "action": "delete",
+                "is_strong_overwrite": False
+            },
+            {
+                "table_name": "products",
+                "action": "update",
+                "is_strong_overwrite": True
+            },
+            {
+                "table_name": "orders",
+                "action": "insert",
+                "is_strong_overwrite": False
+            }
+        ]
+    }
+
+
+@pytest.fixture
+def create_test_sop_file(sample_data):
+    """Создание тестового SOP файла"""
+    def _create_sop_file(compression_method=zlib.Z_BEST_COMPRESSION):
+        # Создаем временный файл
+        with tempfile.NamedTemporaryFile(suffix='.sop', delete=False) as f:
+            sop_path = f.name
+        
+        # Создаем ZIP архив с данными
+        with zipfile.ZipFile(sop_path, 'w', compression=zipfile.ZIP_DEFLATED) as sop_zip:
+            # Конвертируем данные в JSON и сжимаем
+            json_data = json.dumps(sample_data).encode('utf-8')
+            compressed_data = zlib.compress(json_data, compression_method)
+            
+            # Добавляем сжатые данные в архив
+            sop_zip.writestr('package.data', compressed_data)
+        
+        return sop_path
+    
+    return _create_sop_file
+
+
 class TestSOPAnalyzer:
     """Тесты для SOPAnalyzer"""
-    
-    @pytest.fixture
-    def sample_data(self):
-        """Создание тестовых данных"""
-        return {
-            "name": "test_package",
-            "pack_application_id": "test_app_123",
-            "timestamp": "2024-01-15T10:30:00Z",
-            "version": "1.0",
-            "records": [
-                {
-                    "table_name": "users",
-                    "action": "insert",
-                    "is_strong_overwrite": False
-                },
-                {
-                    "table_name": "users",
-                    "action": "delete",
-                    "is_strong_overwrite": False
-                },
-                {
-                    "table_name": "products",
-                    "action": "update",
-                    "is_strong_overwrite": True
-                },
-                {
-                    "table_name": "orders",
-                    "action": "insert",
-                    "is_strong_overwrite": False
-                }
-            ]
-        }
-    
-    @pytest.fixture
-    def create_test_sop_file(self, sample_data):
-        """Создание тестового SOP файла"""
-        def _create_sop_file(compression_method=zlib.Z_BEST_COMPRESSION):
-            # Создаем временный файл
-            with tempfile.NamedTemporaryFile(suffix='.sop', delete=False) as f:
-                sop_path = f.name
-            
-            # Создаем ZIP архив с данными
-            with zipfile.ZipFile(sop_path, 'w', compression=zipfile.ZIP_DEFLATED) as sop_zip:
-                # Конвертируем данные в JSON и сжимаем
-                json_data = json.dumps(sample_data).encode('utf-8')
-                compressed_data = zlib.compress(json_data, compression_method)
-                
-                # Добавляем сжатые данные в архив
-                sop_zip.writestr('package.data', compressed_data)
-            
-            return sop_path
-        
-        return _create_sop_file
     
     def test_analyzer_initialization(self):
         """Тест инициализации анализатора"""
@@ -239,6 +244,32 @@ class TestSOPAnalyzer:
             
         finally:
             os.unlink(sop_path)
+    
+    def test_integration_with_cli(self, create_test_sop_file):
+        """Интеграционный тест с CLI аргументами"""
+        sop_file = create_test_sop_file()
+        try:
+            # Тест базового вызова
+            result = subprocess.run([
+                sys.executable, 'sop_analyzer.py', sop_file
+            ], capture_output=True, text=True, timeout=30)
+            
+            assert result.returncode == 0
+            assert "МЕТАДАННЫЕ ПАКЕТА" in result.stdout
+            assert "СТАТИСТИКА ЗАПИСЕЙ" in result.stdout
+            
+            # Тест JSON вывода
+            result = subprocess.run([
+                sys.executable, 'sop_analyzer.py', sop_file, '--json'
+            ], capture_output=True, text=True, timeout=30)
+            
+            assert result.returncode == 0
+            json_output = json.loads(result.stdout)
+            assert "metadata" in json_output
+            assert "record_statistics" in json_output
+            
+        finally:
+            os.unlink(sop_file)
 
 
 class TestOutputFormatter:
@@ -331,13 +362,8 @@ class TestOutputFormatter:
 class TestDataCompression:
     """Тесты различных методов сжатия"""
     
-    def test_different_compression_levels(self):
+    def test_different_compression_levels(self, sample_data):
         """Тест различных уровней сжатия"""
-        test_data = {
-            "name": "compression_test",
-            "records": [{"table_name": "test", "action": "insert"}] * 10
-        }
-        
         compression_levels = [
             zlib.Z_NO_COMPRESSION,
             zlib.Z_BEST_SPEED,
@@ -352,7 +378,7 @@ class TestDataCompression:
             try:
                 # Создаем SOP файл с указанным уровнем сжатия
                 with zipfile.ZipFile(sop_path, 'w') as sop_zip:
-                    json_data = json.dumps(test_data).encode('utf-8')
+                    json_data = json.dumps(sample_data).encode('utf-8')
                     compressed_data = zlib.compress(json_data, level)
                     sop_zip.writestr('package.data', compressed_data)
                 
@@ -360,41 +386,11 @@ class TestDataCompression:
                 analyzer = SOPAnalyzer(sop_path)
                 data = analyzer.load_data()
                 
-                assert data["name"] == "compression_test"
-                assert len(data["records"]) == 10
+                assert data["name"] == "test_package"
+                assert len(data["records"]) == 4
                 
             finally:
                 os.unlink(sop_path)
-
-
-def test_integration_with_cli(create_test_sop_file):
-    """Интеграционный тест с CLI аргументами"""
-    import subprocess
-    import sys
-    
-    sop_file = create_test_sop_file()
-    try:
-        # Тест базового вызова
-        result = subprocess.run([
-            sys.executable, 'sop_analyzer.py', sop_file
-        ], capture_output=True, text=True, timeout=30)
-        
-        assert result.returncode == 0
-        assert "МЕТАДАННЫЕ ПАКЕТА" in result.stdout
-        assert "СТАТИСТИКА ЗАПИСЕЙ" in result.stdout
-        
-        # Тест JSON вывода
-        result = subprocess.run([
-            sys.executable, 'sop_analyzer.py', sop_file, '--json'
-        ], capture_output=True, text=True, timeout=30)
-        
-        assert result.returncode == 0
-        json_output = json.loads(result.stdout)
-        assert "metadata" in json_output
-        assert "record_statistics" in json_output
-        
-    finally:
-        os.unlink(sop_file)
 
 
 if __name__ == "__main__":
