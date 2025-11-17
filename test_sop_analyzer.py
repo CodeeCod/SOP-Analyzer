@@ -1,3 +1,4 @@
+# test_sop_analyzer.py
 import pytest
 import json
 import zipfile
@@ -304,8 +305,8 @@ class TestOutputFormatter:
         captured = capsys.readouterr()
         output = captured.out
         
-        assert "Empty Table" в output
-        assert "Нет данных" в output
+        assert "Empty Table" in output
+        assert "Нет данных" in output
     
     def test_print_metadata(self, capsys):
         """Тест печати метаданных"""
@@ -320,9 +321,9 @@ class TestOutputFormatter:
         captured = capsys.readouterr()
         output = captured.out
         
-        assert "МЕТАДАННЫЕ ПАКЕТА" в output
-        assert "test_package" в output
-        assert "1.0" в output
+        assert "МЕТАДАННЫЕ ПАКЕТА" in output
+        assert "test_package" in output
+        assert "1.0" in output
     
     def test_print_record_stats(self, capsys):
         """Тест печати статистики записей"""
@@ -334,11 +335,11 @@ class TestOutputFormatter:
         captured = capsys.readouterr()
         output = captured.out
         
-        assert "СТАТИСТИКА ЗАПИСЕЙ" в output
-        assert "100" в output
-        assert "10" в output
-        assert "5" в output
-        assert "insert: 60" в output
+        assert "СТАТИСТИКА ЗАПИСЕЙ" in output
+        assert "100" in output
+        assert "10" in output
+        assert "5" in output
+        assert "insert: 60" in output
     
     def test_print_tables_summary(self, capsys):
         """Тест печати сводки по таблицам"""
@@ -352,10 +353,10 @@ class TestOutputFormatter:
         captured = capsys.readouterr()
         output = captured.out
         
-        assert "ТАБЛИЦЫ" в output
-        assert "users" в output
-        assert "50" в output
-        assert "insert:30" в output
+        assert "ТАБЛИЦЫ" in output
+        assert "users" in output
+        assert "50" in output
+        assert "insert:30" in output
 
 
 class TestDataCompression:
